@@ -1,0 +1,61 @@
+<mujoco model="planar_3R">
+
+  <compiler angle="radian"/>
+
+  <option gravity="0 0 -9.81"/>
+
+  <visual>
+    <global offwidth="1920" offheight="1080" azimuth="45" elevation="0"/>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+  </visual>
+
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="1920" height="1080"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="1920" height="1080"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+  </asset>
+
+  <default>
+    <joint type="hinge" axis="1 0 0" pos="0 0 -0.5" limited="true" damping="0" range="-3.14 3.14"/>
+    <geom type="box" size="0.05 0.05 0.5"/>
+    <motor ctrlrange="-50 50" ctrllimited="true"/>
+  </default>
+
+  <worldbody>
+  
+    <body name="link1" pos="0 0 0">
+      <inertial mass="1" pos="0 0 0" diaginertia="0.01 0.01 0.01"/>
+      <geom rgba="0 0 1 1"/>
+      <joint name="joint1"/>
+
+        <body name="link2" pos="0 0 1.0">
+          <inertial mass="1" pos="0 0 0" diaginertia="0.01 0.01 0.01"/>
+          <geom rgba="0 1 0 1"/>
+          <joint name="joint2"/>
+
+            <body name="link3" pos="0 0 1.0">
+              <inertial mass="1" pos="0 0 0" diaginertia="0.01 0.01 0.01"/>
+              <geom rgba="1 0 0 1"/>
+              <joint name="joint3"/>
+
+                <site name="end_effector" pos="0 0 0.5" size="0.02"/>
+            </body>
+        </body>
+    </body>
+
+  </worldbody>
+
+  <actuator>
+    <motor joint="joint1"/>
+    <motor joint="joint2"/>
+    <motor joint="joint3"/>
+  </actuator>
+
+  <keyframe>
+    <key qpos="0.3 0.2 0.1"/>
+  </keyframe>
+
+</mujoco>

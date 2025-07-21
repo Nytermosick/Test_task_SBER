@@ -1,26 +1,37 @@
 import numpy as np
-from pathlib import Path
 import os
-import pinocchio as pin
 import matplotlib.pyplot as plt
 import mujoco
 import mediapy as media
-from typing import Callable, Optional, Dict, Union, List, Any
+from typing import Dict, List
 import time
-from datetime import datetime
 import mujoco.viewer
     
+
 class Simulator:
-    # TODO: Сделать доку
+    """
+    Класс-обёртка над MuJoCo API для симуляции и визуализации движения манипулятора.
+
+    Позволяет выполнять пошаговую симуляцию модели, логировать состояния,
+    записывать видео и сравнивать с оптимальной траекторией.
+    """
 
     def __init__(self,
                  xml_path: str,
                  dt: float,
                  width: int = 1920,
                  height: int = 1080,
-                 record_video: bool = True,
-                 make_plots: bool = True) -> None:
-        # TODO: Сделать доку
+                 record_video: bool = True) -> None:
+        """
+        Инициализирует симулятор MuJoCo из xml-файла.
+
+        Args:
+            xml_path (str): Путь к MJCF-файлу модели.
+            dt (float): Шаг интегрирования (в секундах).
+            width (int): Ширина рендера.
+            height (int): Высота рендера.
+            record_video (bool): Записывать ли видео симуляции.
+        """
         
         # Загрузка MJCF модели
         self.model = mujoco.MjModel.from_xml_path(xml_path)
@@ -28,7 +39,6 @@ class Simulator:
 
         self.model.opt.timestep = dt
         self.model.opt.integrator = mujoco.mjtIntegrator.mjINT_RK4
-
 
         # Параметры моделирования
         self.dt = dt
@@ -41,12 +51,11 @@ class Simulator:
 
         self.frames = []
 
-
-        if record_video or make_plots:
+        # Создание папки логирования
+        if record_video:
             os.makedirs("logs", exist_ok=True)
 
         self.record_video = record_video
-        self.make_plots = make_plots
 
         # Настройка рендера
         self.renderer = mujoco.Renderer(self.model, width=self.width, height = self.height)
@@ -54,7 +63,9 @@ class Simulator:
 
     
     def _save_video(self) -> None:
-        # TODO: Сделать доку
+        """
+        Сохраняет собранные кадры симуляции в видеофайл logs/vid.mp4.
+        """
 
         if self.frames:
             print(f"Saving video to logs/vid.mp4...")
@@ -63,11 +74,11 @@ class Simulator:
 
 
     def _capture_frame(self) -> np.ndarray:
-        # TODO: Сделать доку
-        """Capture a frame using the renderer.
-        
+        """
+        Делает снимок текущего состояния симуляции.
+
         Returns:
-            RGB image array of current scene
+            np.ndarray: RGB кадр симуляции.
         """
 
         self.renderer.update_scene(self.data)
@@ -76,18 +87,19 @@ class Simulator:
 
 
     def reset(self) -> None:
-        #TODO: Сделать доку
-        """Reset the simulation to the initial state."""
+        """
+        Сбрасывает состояние симуляции на начальное.
+        """
 
         mujoco.mj_resetData(self.model, self.data)
 
 
     def get_state(self) -> Dict[str, np.ndarray]:
-        # TODO: Сделать доку
-        """Get the current state of the model.
-        
+        """
+        Возвращает текущие обобщённые координаты и скорости.
+
         Returns:
-            State vector
+            Dict[str, np.ndarray]: Словарь с полями 'q' и 'dq'.
         """
 
         state = {
@@ -99,36 +111,42 @@ class Simulator:
     
 
     def _def_init_state(self, q0: List[int|float], dq0: List[int|float]) -> None:
-        # TODO: Сделать доку
+        """
+        Устанавливает начальное состояние симуляции.
+
+        Args:
+            q0 (List[float]): Начальные положения сочленений.
+            dq0 (List[float]): Начальные скорости сочленений.
+        """
 
         self.data.qpos = q0
         self.data.qvel = dq0
     
     
     def step(self, tau: np.ndarray) -> None:
-        # TODO: Сделать доку
-        """Step the simulation forward.
-        
+        """
+        Выполняет один шаг симуляции с заданным управляющим воздействием.
+
         Args:
-            tau: Control input
+            tau (np.ndarray): Вектор управляющих моментов.
         """
 
         self.data.ctrl = tau
         mujoco.mj_step(self.model, self.data)
 
 
-    def run(self, ctrl: np.ndarray, q0: List[int|float] = None, dq0: List[int|float] = None) -> None:
-        # TODO: Сделать доку
-        """Run simulation with visualization and recording.
-        
+    def run(self, sim_time: int|float, ctrl: np.ndarray, q0: List[int|float] = None, dq0: List[int|float] = None) -> None:
+        """
+        Запускает симуляцию на заданное время с управлением ctrl.
+
         Args:
-            time_limit: Maximum simulation time in seconds
-            
-        Raises:
-            AssertionError: If controller is not set
+            sim_time (float): Время симуляции в секундах.
+            ctrl (np.ndarray): Массив управляющих воздействий размером (n_u, T).
+            q0 (List[float], optional): Начальные положения. По умолчанию — нули.
+            dq0 (List[float], optional): Начальные скорости. По умолчанию — нули.
         """
 
-        self.N = ctrl.shape[1]
+        ctrl_copy = ctrl.copy()
 
         viewer = mujoco.viewer.launch_passive(
             model = self.model,
@@ -139,8 +157,11 @@ class Simulator:
 
         self.reset()
 
+        # Для логирования
         self.pos = []
+        self.vel = []
         self.controls = []
+        self.times = []
 
         if q0 is None:
             q0 = [0] * self.model.nq
@@ -151,71 +172,146 @@ class Simulator:
 
         mujoco.mjv_defaultFreeCamera(self.model, viewer.cam)
 
-        for k in range(self.N):
-            state = self.get_state()
-            tau = ctrl[:, k]
+        try:
+            t = 0
+            start_time = time.perf_counter()
 
-            self.pos.append(state['q'])
-            self.controls.append(tau)
+            while viewer.is_running():
+                step = time.perf_counter()
 
-            self.step(tau)
-            viewer.sync()
+                # Получение вектора состояния из симуляции
+                state = self.get_state()
+
+                tau = ctrl_copy[:, 0]
+                # try:
+                ctrl_copy = ctrl_copy[:, 1:]
+                # except:
+                #     pass
+
+                # Логирование
+                self.pos.append(state['q'])
+                self.vel.append(state['dq'])
+                self.controls.append(tau)
+                self.times.append(t)
+
+                # Шаг симуляции
+                self.step(tau)
+
+                if viewer:
+                    viewer.sync()
+
+                # Если нужно писать видео
+                if self.record_video:
+                    if len(self.frames) < self.fps * t:
+                        self.frames.append(self._capture_frame())
+
+                t += self.dt
+                if sim_time and t >= sim_time:
+                    break
+
+                # Real-time синхронизация
+                real_time = time.perf_counter() - start_time
+                if t > real_time:
+                    time.sleep(t - real_time)
+                elif real_time - t > self.dt:
+                    print(f"Warning: Simulation running slower than real-time by {real_time - t:.3f}s")
+
+        except KeyboardInterrupt:
+            print("\nSimulation interrupted by user")
+        finally:
+            if viewer:
+                viewer.close()
 
             if self.record_video:
-                    self.frames.append(self._capture_frame())
+                self._save_video()
 
-        viewer.close()
-
-        if self.record_video:
-            self._save_video()
+            self.renderer.close()
     
 
-    def plot_results(self):
-        # TODO: Сделать доку
-        """Plot and save simulation results."""
+    def plot_results(self, x_opt: np.ndarray = None) -> None:
+        """
+        Строит графики результатов симуляции и сравнивает с оптимальным решением (если передано).
 
-        if self.log_path is None:
-            self.make_log_path()
+        Args:
+            x_opt (np.ndarray, optional): Оптимальное решение траектории (q и dq).
+        """
 
         self.pos = np.array(self.pos)
+        self.vel = np.array(self.vel)
         self.controls = np.array(self.controls)
         self.times = np.array(self.times)
         
-        # Joint positions plot
-        plt.figure(figsize=(10, 6))
-        for i in range(self.pos.shape[1]):
-            plt.plot(self.times, self.pos[:, i], label=f'Joint {i+1}')
-        plt.xlabel('Time [s]')
-        plt.ylabel('Joint Position [rad]')
-        plt.title('Joint Position over Time')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(f'logs/{self.log_path}/position.png')
+
+        # Построение графиков действительных значений
+        fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+
+        # Положения
+        for i in range(self.model.nq):
+            axs[0].plot(self.times, self.pos[:, i])
+        axs[0].set_ylabel("Joint angles (rad)")
+        axs[0].legend([f"q{i+1}" for i in range(self.pos.shape[1])])
+        axs[0].grid(True)
+
+        # Скорости
+        for i in range(self.model.nv):
+            axs[1].plot(self.times, self.vel[:, i])
+        axs[1].set_ylabel("Joint velocities (rad/s)")
+        axs[1].legend([f"v{i+1}" for i in range(self.vel.shape[1])])
+        axs[1].grid(True)
+
+        # Моменты
+        for i in range(self.model.nu):
+            axs[2].plot(self.times, self.controls[:, i])
+        axs[2].set_ylabel("Torques (Nm)")
+        axs[2].set_xlabel("Time (s)")
+        axs[2].legend([f"u{i+1}" for i in range(self.controls.shape[1])])
+        axs[2].grid(True)
+
+        # Общий заголовок
+        fig.suptitle("Real Results for 3R Manipulator")
+
+        # Сохранение в файл
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig("logs/real_results.png")
         plt.close()
 
-        # Joint position errors plot
-        plt.figure(figsize=(10, 6))
-        for i in range(self.pos.shape[1]):
-            plt.plot(self.times, 0 - self.pos[:, i], label=f'Joint {i+1}')
-        plt.xlabel('Time [s]')
-        plt.ylabel('Joint Position error [rad]')
-        plt.title('Joint Position error over Time')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(f'logs/{self.log_path}/position_error.png')
-        plt.close()
 
+        # Если передали результаты оптимизации, то будет построен график сравнения реальных результатов и оптимальных
+        if x_opt is None:
+            return
+        
+        q_opt = x_opt[:self.model.nq].T
+        v_opt = x_opt[self.model.nq:].T
 
-        # Joint controls plot
-        if self.controls.ndim == 1:
-            self.controls = self.controls.reshape(-1, 1)
+        fig, axes = plt.subplots(3, 2, figsize=(20, 15))
 
-        for i in range(self.controls.shape[1]):
-            plt.plot(self.times, self.controls[:, i], label=f'Joint {i+1}')
-        plt.xlabel('Time [s]')
-        plt.ylabel('Joint control signals')
-        plt.title('Joint control signals over Time')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(f'logs/{self.log_path}/control_signals.png')
+        for i in range(3):
+            # Положения
+            ax_angle = axes[i, 0]
+            ax_angle.plot(self.times, self.pos[:, i], label="Real", linewidth=2)
+            ax_angle.plot(self.times, q_opt[:-1, i], '--', label="Optimal", linewidth=2)
+            ax_angle.set_ylabel(f'Joint {i+1} Angle [rad]')
+            ax_angle.grid(True)
+            if i == 0:
+                ax_angle.set_title("Joint Angles")
+            if i == 2:
+                ax_angle.set_xlabel("Time [s]")
+
+            # Скорости
+            ax_vel = axes[i, 1]
+            ax_vel.plot(self.times, self.vel[:, i], label="Real", linewidth=2)
+            ax_vel.plot(self.times, v_opt[:-1, i], '--', label="Optimal", linewidth=2)
+            ax_vel.set_ylabel(f'Joint {i+1} Velocity [rad/s]')
+            ax_vel.grid(True)
+            if i == 0:
+                ax_vel.set_title("Joint Velocities")
+            if i == 2:
+                ax_vel.set_xlabel("Time [s]")
+
+        # Общая легенда
+        handles, labels = axes[0, 0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper center', ncol=4, fontsize='large')
+
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig("logs/difference.png")
         plt.close()

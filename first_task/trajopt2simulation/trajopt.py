@@ -13,16 +13,23 @@ class TrajectoryOptimization:
     формулировку задачи оптимизации, добавление ограничений и визуализацию результатов.
     """
 
-    def __init__(self, urdf_path: str) -> None:
+    def __init__(self, robot_path: str, log_path: str, idx: int) -> None:
         """
         Инициализирует класс TrajectoryOptimization.
 
         Args:
-            urdf_path (str): Путь до urdf-модели робота.
+            robot_path (str): Путь до модели робота.
+            log_path (str): Путь до папки логгирования
+            idx (int): Костыль для наложения ограничений на проваливание линков под пол (для планарника - 2, для ur10 - 1)
         """
 
         # Инициализация модели
-        model = pin.buildModelFromUrdf(urdf_path)
+        ext = robot_path.split(".")[-1]
+        if ext == "urdf":
+            model = pin.buildModelFromUrdf(robot_path)
+        elif ext == "xml":
+            model = pin.buildModelFromMJCF(robot_path)
+
         self.model = cpin.Model(model)
         self.data = self.model.createData()
 
@@ -43,9 +50,15 @@ class TrajectoryOptimization:
         # Выбор интегратора
         self.integrator = self.rk4_step # Наверное можно добавить выбор и  других интеграторов (неявные?), но явный рунге-кутта тоже сойдёт
 
+        # Вынужденный костыль, чтобы просчитывать прямую кинематику для звеньев. Указывается тот индекс, с которого будет рассчитываться прямая кинематика,
+        # чтобы учесть их z-координату в ограничениях и исключить проваливание под пол
+        self.idx = idx 
+
         # Построение графа вычислений для z-координат линков, чтобы задать ограничения для избежания проваливания линков под пол
         self.calculate_z = self.FK()
 
+        # Папка логгирования
+        self.log_path = log_path
 
     def calculate_dynamics(self) -> ca.Function:
         """
@@ -98,7 +111,7 @@ class TrajectoryOptimization:
         # Собираем id фреймов линков для выражения z-координат линков
         link_frame_ids = [fid for fid, frame in enumerate(self.model.frames)
                   if frame.type == pin.FrameType.BODY]
-        link_frame_ids = link_frame_ids[2:] # Вынужденный костыль, чтобы не учитывать link0 и link1, у которых z координата всегда в нуле
+        link_frame_ids = link_frame_ids[self.idx:] # Вынужденный костыль, чтобы не учитывать линки, у которых z координата всегда в нуле
         
         # Вызываем полную прямую кинематику
         cpin.framesForwardKinematics(self.model, self.data, self.q)
@@ -231,7 +244,7 @@ class TrajectoryOptimization:
         v = self.x_res[self.nq:]
         u = self.u_res
 
-        os.makedirs("logs", exist_ok=True)
+        os.makedirs(self.log_path, exist_ok=True)
 
         # Построение графиков
         fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
@@ -263,5 +276,5 @@ class TrajectoryOptimization:
 
         # Сохранение в файл
         plt.tight_layout(rect=[0, 0, 1, 0.96])
-        plt.savefig("logs/optimization_results.png")
+        plt.savefig(f"{self.log_path}/optimization_results.png")
         plt.close()

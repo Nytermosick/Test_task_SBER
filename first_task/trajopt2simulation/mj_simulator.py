@@ -18,6 +18,7 @@ class Simulator:
 
     def __init__(self,
                  xml_path: str,
+                 log_path: str,
                  dt: float,
                  width: int = 1920,
                  height: int = 1080,
@@ -52,8 +53,9 @@ class Simulator:
         self.frames = []
 
         # Создание папки логирования
+        self.log_path = log_path
         if record_video:
-            os.makedirs("logs", exist_ok=True)
+            os.makedirs(self.log_path, exist_ok=True)
 
         self.record_video = record_video
 
@@ -68,8 +70,8 @@ class Simulator:
         """
 
         if self.frames:
-            print(f"Saving video to logs/vid.mp4...")
-            media.write_video("logs/vid.mp4", self.frames, fps=self.fps)
+            print(f"Saving video to {self.log_path}/vid.mp4...")
+            media.write_video(f"{self.log_path}/vid.mp4", self.frames, fps=self.fps)
             self.frames = []
 
 
@@ -130,9 +132,11 @@ class Simulator:
         Args:
             tau (np.ndarray): Вектор управляющих моментов.
         """
-
+        
         self.data.ctrl = tau
         mujoco.mj_step(self.model, self.data)
+
+        self.data.qvel[:] = np.clip(self.data.qvel, -2, 2) # Я так понял, на моторах в муджоко нельзя поставить ограничения по скорости, поэтому так (КОСТЫЛЬ)
 
 
     def run(self, sim_time: int|float, ctrl: np.ndarray, q0: List[int|float] = None, dq0: List[int|float] = None) -> None:
@@ -272,7 +276,7 @@ class Simulator:
 
         # Сохранение в файл
         plt.tight_layout(rect=[0, 0, 1, 0.96])
-        plt.savefig("logs/real_results.png")
+        plt.savefig(f"{self.log_path}/real_results.png")
         plt.close()
 
 
@@ -283,9 +287,9 @@ class Simulator:
         q_opt = x_opt[:self.model.nq].T
         v_opt = x_opt[self.model.nq:].T
 
-        fig, axes = plt.subplots(3, 2, figsize=(20, 15))
+        fig, axes = plt.subplots(self.model.nq, 2, figsize=(20, 15))
 
-        for i in range(3):
+        for i in range(self.model.nq):
             # Положения
             ax_angle = axes[i, 0]
             ax_angle.plot(self.times, self.pos[:, i], label="Real", linewidth=2)
@@ -313,5 +317,5 @@ class Simulator:
         fig.legend(handles, labels, loc='upper center', ncol=4, fontsize='large')
 
         plt.tight_layout(rect=[0, 0, 1, 0.96])
-        plt.savefig("logs/difference.png")
+        plt.savefig(f"{self.log_path}/difference.png")
         plt.close()

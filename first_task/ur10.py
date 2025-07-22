@@ -1,30 +1,35 @@
-from trajopt import TrajectoryOptimization
-from mj_simulator import Simulator
+from trajopt2simulation import TrajectoryOptimization
+from trajopt2simulation import Simulator
+from trajopt2simulation import PI
 
-PI = 3.1415926535
 
-# Пути до urdf и mjcf файлов
-urdf_path = "../../robots/planar_3R/planar_3R.urdf"
-mjcf_path = "../../robots/planar_3R/planar_3R.xml"
+# Путь до mjcf файла
+mjcf_path = "../robots/ur10/ur10.xml"
+
+# Путь до папки логгирования
+log_path = "logs/ur10"
 
 # Параметры задачи
-x0 = [0, 0, 0, 0, 0, 0] # Начальный вектор состояний манипулятора [q, v]
-x_des = [PI/6, PI/6, PI/6, 0, 0, 0] # Заданный вектор состояний манипулятора [q, v]
+x0 = [0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0] # Начальный вектор состояний манипулятора [q, v]
+
+x_des = [-PI/2, -PI/2, PI/2, -PI/3, PI/3, PI/3,
+         0, 0, 0, 0, 0, 0] # Заданный вектор состояний манипулятора [q, v]
 
 N = 100 # Длина горизонта
-T = 2 # Время прихода в заданную позицию
-T_hold = 1 # Время, которое манипулятор будет держать заданную позицию после прихода в неё
+T = 1 # Время прихода в заданную позицию
+T_hold = 0 # Время, которое манипулятор будет держать заданную позицию после прихода в неё
 
 T_total = T + T_hold # Общее время моделирования
 
 # Ограничения для углов, скоростей и управляющих моментов
 q_bounds = [-PI, PI]
 v_bounds = [-2, 2]
-u_bounds = [-30, 30]
+u_bounds = [[-330, -330, -150, -54, -54, -54], [330, 330, 150, 54, 54, 54]]
 
 
 # Создание объекта оптимизации траектории
-traj_opt = TrajectoryOptimization(urdf_path)
+traj_opt = TrajectoryOptimization(robot_path=mjcf_path, log_path=log_path, idx=1)
 
 # Инициализация оптимизации
 traj_opt.opti_init(N=N, T=T, T_hold=T_hold, x0=x0)
@@ -46,7 +51,8 @@ x_opt, u_opt = traj_opt.result()
 sim = Simulator(
     xml_path=mjcf_path,
     dt = traj_opt.dt,
-    record_video=True
+    record_video=True,
+    log_path = log_path
 )
 
 # Запуск симуляции

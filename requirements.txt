@@ -1,0 +1,15 @@
+ipykernel
+jupyter
+matplotlib
+numpy
+sympy
+nbformat
+quarto
+robot_descriptions
+mujoco
+mediapy
+
+# Из исходников
+# pin
+# casadi
+# eigenpy

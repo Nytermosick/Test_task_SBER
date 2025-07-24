@@ -42,7 +42,6 @@
   </asset>
 
   <worldbody>
-    <camera name="my" pos="-1.020 -1.642 1.588" xyaxes="0.769 -0.639 0.000 0.312 0.376 0.872"/>
     
     <light directional="true" diffuse="0.4 0.4 0.4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" castshadow="false" />
     <light directional="true" diffuse="0.6 0.6 0.6" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1" />
@@ -83,6 +82,7 @@
                   <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="wrist3" />
                   <geom size="0.005 0.005 0.005" pos="0 0.0822 0" quat="0.707107 0 0 0.707107" type="box" contype="1" conaffinity="0" density="0" group="1" class="visualgeom" />
                   <geom type="box" rgba="" size="0.005 0.005 0.005" pos="0 0.0822 0" quat="0.707107 0 0 0.707107" />
+                  <site name="ee_site" pos="0 0.0822 0" size="0.005" type="sphere" rgba="1 0 0 1" />
                 </body>
               </body>
             </body>

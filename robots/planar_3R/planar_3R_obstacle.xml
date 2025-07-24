@@ -5,7 +5,7 @@
   <option gravity="0 0 -9.81"/>
 
   <visual>
-    <global offwidth="1920" offheight="1080" azimuth="45" elevation="0"/>
+    <global offwidth="1920" offheight="1080" azimuth="0" elevation="0"/>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0"/>
     <rgba haze="0.15 0.25 0.35 1"/>
   </visual>
@@ -25,10 +25,18 @@
   </default>
 
   <worldbody>
-    <!-- <body name="target" pos="0 1.5 1.5" quat="1 0 0 0" mocap="true">
+    <body name="obstacle1" pos="0 1.5 0.5">
+      <geom type="sphere" size="0.2" rgba="1 0 0 1"/>
+    </body>
+
+    <body name="obstacle2" pos="0 -1.5 0.5">
+      <geom type="sphere" size="0.2" rgba="1 0 0 1"/>
+    </body>
+
+    <body name="target" pos="0 1.5 1.5" quat="1 0 0 0" mocap="true">
       <geom type="box" size=".05 .05 .05" contype="0" conaffinity="0" rgba=".6 .3 .3 .5"/>
       <site type="sphere" size="0.01" rgba="0 0 1 1" group="1"/>
-    </body> -->
+    </body>
   
     <body name="link1" pos="0 0 0.5">
       <inertial mass="1" pos="0 0 0" diaginertia="0.01 0.01 0.01"/>

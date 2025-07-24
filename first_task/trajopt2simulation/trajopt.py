@@ -272,7 +272,7 @@ class TrajectoryOptimization:
         axs[2].grid(True)
 
         # Общий заголовок
-        fig.suptitle("Optimization Results for 3R Manipulator")
+        fig.suptitle("Optimization Results for Manipulator")
 
         # Сохранение в файл
         plt.tight_layout(rect=[0, 0, 1, 0.96])
